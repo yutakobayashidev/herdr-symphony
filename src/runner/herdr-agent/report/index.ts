@@ -7,6 +7,7 @@ export function createReportResolver(deps: ReportResolverDeps = {}): ReportResol
   const claude = new ClaudeReportResolver(deps)
   return {
     async resolve(ctx: ReportContext): Promise<string | null> {
+      if (ctx.agentKind === "codex") return null
       if (ctx.agentKind === "claude") return claude.resolve(ctx)
       return opencode.resolve(ctx)
     },

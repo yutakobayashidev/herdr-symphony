@@ -5,7 +5,9 @@ import type { Runner } from "./types"
 
 export function createRunner(config: ServiceConfig): Runner {
   if (config.work.runner === "herdr_core") {
-    return new HerdrAgentRunner(config, { herdrClient: createHcClient() })
+    return new HerdrAgentRunner(config, {
+      herdrClient: createHcClient({ appSpace: config.work.herdrAgent.appSpace }),
+    })
   }
   return new HerdrAgentRunner(config)
 }

@@ -131,7 +131,15 @@ const HerdrAgentClaudeSchema = z.object({
 })
 
 const HerdrAgentSchema = z.object({
-  agent: z.enum(["opencode", "claude"]),
+  app_space: z.string().optional().nullable(),
+  agent: z.enum(["opencode", "claude", "codex"]),
+  codex: z
+    .object({
+      model: z.string().optional().nullable(),
+      thinking_effort: z.string().optional().nullable(),
+      env: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
   opencode: HerdrAgentOpencodeSchema.optional(),
   claude: HerdrAgentClaudeSchema.optional(),
   workspace_label: z.string().optional().nullable(),
@@ -236,7 +244,13 @@ export function resolveConfigFromSchema(input: unknown): ServiceConfig {
       stoppedState: normalizeOptionalString(work.stopped_state),
       runner: normalizeOptionalString(work.runner) ?? "herdr_agent",
       herdrAgent: {
+        appSpace: normalizeOptionalString(herdrAgentRaw?.app_space),
         agent: herdrAgentRaw?.agent ?? "opencode",
+        codex: {
+          model: normalizeOptionalString(herdrAgentRaw?.codex?.model),
+          thinkingEffort: normalizeOptionalString(herdrAgentRaw?.codex?.thinking_effort),
+          env: herdrAgentRaw?.codex?.env ?? {},
+        },
         opencode: {
           model:
             typeof herdrAgentRaw?.opencode?.model === "string"
@@ -274,7 +288,7 @@ export function resolveConfigFromSchema(input: unknown): ServiceConfig {
       workspace: {
         provider:
           typeof work.workspace?.provider === "string"
-            ? (work.workspace.provider.trim() as "git" | "gwq" | "none")
+            ? (work.workspace.provider.trim() as "git" | "gwq" | "git-wt" | "none")
             : "gwq",
         reuseExisting: work.workspace?.reuse_existing !== false,
         createIfMissing: work.workspace?.create_if_missing !== false,
@@ -339,6 +353,7 @@ export function validateDispatchConfig(config: ServiceConfig): void {
   if (
     config.work.workspace.provider !== "git" &&
     config.work.workspace.provider !== "gwq" &&
+    config.work.workspace.provider !== "git-wt" &&
     config.work.workspace.provider !== "none"
   ) {
     throw new WorkflowError(
@@ -358,10 +373,17 @@ export function validateDispatchConfig(config: ServiceConfig): void {
     )
   }
 
-  if (config.work.herdrAgent.agent !== "opencode" && config.work.herdrAgent.agent !== "claude") {
+  if (!["opencode", "claude", "codex"].includes(config.work.herdrAgent.agent)) {
     throw new WorkflowError(
       ErrorCode.INVALID_FRONT_MATTER,
       `unsupported herdr_agent.agent: ${config.work.herdrAgent.agent}`,
+    )
+  }
+
+  if (config.work.herdrAgent.agent === "codex" && config.work.runner !== "herdr_core") {
+    throw new WorkflowError(
+      ErrorCode.INVALID_FRONT_MATTER,
+      "codex requires work.runner: herdr_core",
     )
   }
 

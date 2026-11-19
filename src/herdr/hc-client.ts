@@ -9,6 +9,7 @@ import type {
 import { defaultCommandRunner } from "./herdr-client"
 
 export type HcClientDeps = HerdrClientDeps & {
+  appSpace?: string | null
   session?: string
   pollIntervalMs?: number
   now?: () => number
@@ -42,6 +43,7 @@ function wrapArgvWithEnv(argv: string[], env: Record<string, string> | undefined
 }
 
 function extractHcStatusState(status: unknown): HerdrAgentState {
+  if (status === "error") return "error"
   if (status === "working" || status === "blocked" || status === "done" || status === "idle") {
     return status
   }
@@ -65,10 +67,10 @@ function parseTerminal(stdout: string): HerdrAgentInfo | null {
   } catch {
     return null
   }
-  if (typeof record.address !== "string" || record.state === "finished") return null
+  if (typeof record.address !== "string") return null
   return {
     name: typeof record.name === "string" ? record.name : null,
-    state: extractHcStatusState(record.status?.state),
+    state: record.state === "finished" ? "exited" : extractHcStatusState(record.status?.state),
     paneId: record.address,
     workspaceId: record.labels?.issue ?? null,
   }
@@ -93,6 +95,7 @@ export function createHcClient(deps: HcClientDeps = {}): HerdrClient {
         "--json",
         "--label",
         `issue=${opts.workspaceId}`,
+        ...(deps.appSpace ? ["--label", `herdr.space=${deps.appSpace}`] : []),
         "--no-notify",
         "--outlive-parent",
         "--cwd",

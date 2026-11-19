@@ -3,7 +3,7 @@ import type { CommandRunner } from "../../../herdr/herdr-client"
 export type ReportContext = {
   workspacePath: string
   startedAt: string
-  agentKind: "opencode" | "claude"
+  agentKind: "opencode" | "claude" | "codex"
 }
 
 export interface ReportResolver {

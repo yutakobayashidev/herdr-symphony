@@ -7,7 +7,7 @@ GitHub Project をポーリングし、Herdr 経由で Agent の起動・監視�
 - [openai/symphony](https://github.com/openai/symphony) と [workaholic](https://github.com/tomoasleep/workaholic) の設計をベースにした Agent 管理ツール
 - TUI・Web UI を持たず、Agent の動作ログ・状態はすべて Herdr 上で確認する
 - GitHub Project（または file tracker / schedule tracker）を監視し、候補 Issue を検出する
-- gwq で worktree を作成し、Herdr workspace で Agent を起動する
+- gwq、git-wt、または Git で worktree を作成し、Herdr workspace で Agent を起動する
 - OpenCode または Claude Code を Herdr pane 内で実行し、完了を検知する
 
 ## セットアップ
@@ -111,7 +111,7 @@ bun run test:e2e     # E2E テスト（herdr binary がない場合は skip）
 1. poll tick で tracker から候補 Issue を取得
 2. `work.if` 条件で Issue をフィルタ（未設定時はすべて通過）
 3. orchestrator が dispatchable な Issue を選出（concurrency / state / blocker を判定）
-4. `gwq add` または `git worktree` で worktree を作成
+4. 選択した provider で worktree を作成（`gwq add` / `git wt` / `git worktree add`）
 5. `herdr workspace create` で Herdr workspace を作成
 6. `herdr agent start` で OpenCode または Claude Code を Herdr pane 内で起動
    - agent name は `{issue.identifier}-{workflowName}-{timestamp}`（複数 workflow や再実行での name 衝突を回避）
@@ -497,6 +497,25 @@ work:
 
 ### work.workspace
 
+#### git-wt（このforkの個人環境向け設定）
+
+`git-wt` provider は、Issue の `owner/repo` を `ghq list -p -e` で検索し、見つかったリポジトリで `git wt --nocd -- <branch>` を実行します。自動cloneは行いません。事前に `ghq get` してください。絶対パスの repository も指定できます。
+
+```yaml
+work:
+  workspace:
+    provider: git-wt
+    branch: 'herdr/{{ issue.identifier | replace: "/", "_" | replace: "#", "_" }}'
+    reuse_existing: true
+    create_if_missing: true
+```
+
+保存先・コピー・作成フックは git-wt の設定に従います。たとえば dotnix の `git config wt.basedir .git/worktree` を利用できます。Symphony 側の `path` / `base_dir` は指定しないでください。
+
+作成先は標準出力の末尾から推測せず、`git wt --json` から取得します。既存worktreeはブランチで検索して再利用し、作成フックを再実行しません。`reuse_existing: false` で既存worktreeがある場合や、作成フックが失敗した場合はエラーになります。フック失敗後にもworktreeが残る場合があるため、再試行前にその状態を確認してください。
+
+必要なコマンドは `git`、`git-wt`、`ghq` です。`gwq` provider の `command` を git-wt に置き換える設定ではありません。
+
 #### gwq (デフォルト)
 
 ```yaml
@@ -662,3 +681,23 @@ Claude は task を受け取ると `herdr-symphony.ack` (`ackOf=task`) を返す
 | `agent.max_concurrent_agents` | number | `10` | 同時実行可能な Agent 数の上限 |
 | `agent.max_retry_backoff_ms` | number | `300000` | リトライの最大バックオフ間隔（ミリ秒）|
 | `agent.max_concurrent_agents_by_state` | Record<string, number> | null | 状態別の同時実行数上限 |
+
+### Codex through Herdr Core
+
+Codex uses the existing Herdr runner and an interactive terminal. Configure
+`work.runner: herdr_core`, `work.herdr_agent.agent: codex`, and optionally
+`work.herdr_agent.codex.model`, `thinking_effort`, and `env`. The runner launches
+`codex --no-daemon`; Codex retains its configured approval and sandbox policies.
+No Codex App Server client is embedded in Symphony.
+
+The prompt requires the existing `herdr-symphony report` command to report
+completion. Idle alone does not establish success. An error, or an agent exit
+without a final report, fails the attempt. Folder trust and interactive approval
+prompts may require operator input on the first run. The Codex executable and
+`herdr-symphony report` must be available on the agent's PATH.
+
+### Herdr App space
+
+With `work.runner: herdr_core`, set `work.herdr_agent.app_space` to a local Herdr App space ID to show each worker in its own tab. Omit it to keep workers headless. The adapter uses Core's `herdr.space` label; it does not require the App to be open at launch. An unknown ID is adopted as a new unnamed space. Keep a Queue tab in a named dedicated space if its name should survive the last worker closing.
+
+Core processes inherit the Core server's environment, not the Symphony service's. Pass the intended `PATH`, `CODEX_HOME`, and XDG directories through `work.herdr_agent.codex.env`, using the same source as the service and history collector. Completion cleanup still targets only the worker's recorded terminal ID.

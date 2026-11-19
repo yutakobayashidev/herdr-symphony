@@ -18,7 +18,7 @@ import { renderPrompt } from "./workflow/render-prompt"
 import type { WorkspaceResult } from "./workspace/workspace-manager"
 import { ensureWorkspace, runHook } from "./workspace/workspace-manager"
 
-const CLAUDE_REPORT_INSTRUCTION = [
+const AGENT_REPORT_INSTRUCTION = [
   "",
   "## 完了報告",
   "",
@@ -485,33 +485,42 @@ export class SymphonyService {
         if (messenger === "report_file") {
           reportPath = join(workspace.path, ".herdr-symphony-report.json")
           await rm(reportPath, { force: true })
-          finalContent = `${content}${CLAUDE_REPORT_INSTRUCTION}`
+          finalContent = `${content}${AGENT_REPORT_INSTRUCTION}`
         } else {
           agmsg = { team: "herdr-symphony", orchestratorAgent: "herdr-symphony" }
         }
-      } else if (runtimeConfig.runner.opencode.interactive) {
+      } else if (
+        runtimeConfig.runner.agent === "codex" ||
+        runtimeConfig.runner.opencode.interactive
+      ) {
         reportPath = join(workspace.path, ".herdr-symphony-report.json")
         await rm(reportPath, { force: true })
-        finalContent = `${content}${CLAUDE_REPORT_INSTRUCTION}`
+        finalContent = `${content}${AGENT_REPORT_INSTRUCTION}`
       }
 
       const runnerTimeoutMs = runtimeConfig.runner.turnTimeoutMs
       const runnerAgent = runtimeConfig.runner.opencode.agent
       const runnerModel =
-        runtimeConfig.runner.agent === "claude"
-          ? runtimeConfig.runner.claude.model
-          : runtimeConfig.runner.opencode.model
+        runtimeConfig.runner.agent === "codex"
+          ? runtimeConfig.runner.codex?.model
+          : runtimeConfig.runner.agent === "claude"
+            ? runtimeConfig.runner.claude.model
+            : runtimeConfig.runner.opencode.model
       const runnerPermissionMode =
         runtimeConfig.runner.agent === "claude" ? runtimeConfig.runner.claude.permissionMode : null
       const runnerThinkingEffort =
-        runtimeConfig.runner.agent === "claude"
-          ? runtimeConfig.runner.claude.thinkingEffort
-          : runtimeConfig.runner.opencode.thinkingEffort
+        runtimeConfig.runner.agent === "codex"
+          ? runtimeConfig.runner.codex?.thinkingEffort
+          : runtimeConfig.runner.agent === "claude"
+            ? runtimeConfig.runner.claude.thinkingEffort
+            : runtimeConfig.runner.opencode.thinkingEffort
       const runnerOnBlocked = runtimeConfig.runner.onBlocked
       const runnerEnv =
-        runtimeConfig.runner.agent === "claude"
-          ? runtimeConfig.runner.claude.env
-          : runtimeConfig.runner.opencode.env
+        runtimeConfig.runner.agent === "codex"
+          ? (runtimeConfig.runner.codex?.env ?? {})
+          : runtimeConfig.runner.agent === "claude"
+            ? runtimeConfig.runner.claude.env
+            : runtimeConfig.runner.opencode.env
       this.logger.info(
         `runner start kind=${runtimeConfig.runner.kind} workspace=${workspace.path}` +
           (runnerAgent ? ` agent=${runnerAgent}` : "") +
