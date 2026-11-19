@@ -163,7 +163,7 @@ describe("HerdrClient", () => {
     const agent = await client.startAgent("ISSUE-1", {
       workspaceId: "w2",
       cwd: "/",
-      argv: ["/usr/bin/printf", "%s", prompt],
+      argv: ["printf", "%s", prompt],
       env: { FOO: "bar" },
     })
 
@@ -199,7 +199,7 @@ describe("HerdrClient", () => {
     if (!scriptPath) throw new Error("launcher script path missing")
     const script = readFileSync(scriptPath, "utf8")
     expect(script).toContain("cd '/'")
-    expect(script).toContain(`'/usr/bin/printf' '%s' '${prompt}'`)
+    expect(script).toContain(`'printf' '%s' '${prompt}'`)
     expect(script).toContain("trap 'rm -f -- \"$script_path\"' EXIT")
     expect(execFileSync("sh", [scriptPath], { encoding: "utf8" })).toBe(prompt)
     expect(existsSync(scriptPath)).toBe(false)

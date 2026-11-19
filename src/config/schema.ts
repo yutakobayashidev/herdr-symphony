@@ -274,7 +274,7 @@ export function resolveConfigFromSchema(input: unknown): ServiceConfig {
       workspace: {
         provider:
           typeof work.workspace?.provider === "string"
-            ? (work.workspace.provider.trim() as "git" | "gwq" | "none")
+            ? (work.workspace.provider.trim() as "git" | "gwq" | "git-wt" | "none")
             : "gwq",
         reuseExisting: work.workspace?.reuse_existing !== false,
         createIfMissing: work.workspace?.create_if_missing !== false,
@@ -339,6 +339,7 @@ export function validateDispatchConfig(config: ServiceConfig): void {
   if (
     config.work.workspace.provider !== "git" &&
     config.work.workspace.provider !== "gwq" &&
+    config.work.workspace.provider !== "git-wt" &&
     config.work.workspace.provider !== "none"
   ) {
     throw new WorkflowError(

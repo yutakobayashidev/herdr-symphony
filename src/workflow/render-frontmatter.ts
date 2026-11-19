@@ -207,7 +207,14 @@ function normalizeWorkspaceConfig(
   fallback: WorkConfig["workspace"],
 ): WorkConfig["workspace"] {
   return {
-    provider: rendered.provider === "gwq" ? "gwq" : rendered.provider === "none" ? "none" : "git",
+    provider:
+      rendered.provider === "git-wt"
+        ? "git-wt"
+        : rendered.provider === "gwq"
+          ? "gwq"
+          : rendered.provider === "none"
+            ? "none"
+            : "git",
     reuseExisting: rendered.reuseExisting,
     createIfMissing: rendered.createIfMissing,
     branch: normalizeOverride(rendered.branch),

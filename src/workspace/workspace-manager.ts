@@ -79,8 +79,8 @@ export async function ensureWorkspace(
   const runGit = createLoggedRunner("workspace git", runGitBase, onLog)
   logLine(onLog, `workspace ensure start issue=${issue.identifier} provider=${config.provider}`)
   const repositoryRoot =
-    config.provider === "gwq"
-      ? await resolveRepositoryRootForGwq(issue.repository, runCommand, runGit)
+    config.provider === "gwq" || config.provider === "git-wt"
+      ? await resolveRepositoryRootViaGhq(issue.repository, runCommand, runGit)
       : await resolveRepositoryRoot(issue.repository, runGit)
 
   if (config.provider === "none") {
@@ -102,6 +102,15 @@ export async function ensureWorkspace(
     logLine(
       onLog,
       `workspace ready key=${result.key} created=false path=${result.path} branch=none`,
+    )
+    return result
+  }
+
+  if (config.provider === "git-wt") {
+    const result = await ensureGitWtWorkspace(issue, config, repositoryRoot, runCommand)
+    logLine(
+      onLog,
+      `workspace ready key=${result.key} created=${result.createdNow} path=${result.path} branch=${result.branch}`,
     )
     return result
   }
@@ -139,6 +148,36 @@ function buildWorkspaceSeed(issue: Issue): WorkspaceSeed {
     key,
     branch: `herdr/${key}`,
   }
+}
+
+async function ensureGitWtWorkspace(
+  issue: Issue,
+  config: WorkspaceConfig,
+  repositoryRoot: string,
+  runCommand: CommandRunner,
+): Promise<WorkspaceResult> {
+  if (config.path || config.baseDir) {
+    throw new Error("git-wt provider uses wt.basedir; remove work.workspace.path and base_dir")
+  }
+  const seed = buildWorkspaceSeed(issue)
+  const branch = normalizeTemplateString(config.branch) ?? seed.branch
+  const find = async () => {
+    const result = await runCommand("git", ["wt", "--json"], repositoryRoot)
+    if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "git wt --json failed")
+    const entries = JSON.parse(result.stdout) as WorktreeEntry[]
+    return entries.find((entry) => entry.branch === branch)
+  }
+  const existing = await find()
+  if (existing) {
+    if (!config.reuseExisting) throw new Error(`workspace already exists for branch: ${branch}`)
+    return { key: seed.key, branch, path: existing.path, repositoryRoot, createdNow: false }
+  }
+  if (!config.createIfMissing) throw new Error(`workspace not found for branch: ${branch}`)
+  const result = await runCommand("git", ["wt", "--nocd", "--", branch], repositoryRoot)
+  if (result.exitCode !== 0) throw new Error(result.stderr.trim() || `git wt failed: ${branch}`)
+  const created = await find()
+  if (!created) throw new Error(`git-wt workspace not found after creation: ${branch}`)
+  return { key: seed.key, branch, path: created.path, repositoryRoot, createdNow: true }
 }
 
 async function ensureGitWorkspace(
@@ -308,12 +347,12 @@ async function resolveRepositoryRoot(
   return path.resolve(result.stdout.trim())
 }
 
-async function resolveRepositoryRootForGwq(
+async function resolveRepositoryRootViaGhq(
   repository: string | null,
   runCommand: CommandRunner,
   runGit: GitCommandRunner,
 ): Promise<string> {
-  const basePath = await resolveRepositoryPathForGwq(repository, runCommand)
+  const basePath = await resolveRepositoryPathViaGhq(repository, runCommand)
   const result = await runGit("git", ["rev-parse", "--show-toplevel"], basePath)
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || `git repository not found: ${basePath}`)
@@ -322,7 +361,7 @@ async function resolveRepositoryRootForGwq(
   return path.resolve(result.stdout.trim())
 }
 
-async function resolveRepositoryPathForGwq(
+async function resolveRepositoryPathViaGhq(
   repository: string | null,
   runCommand: CommandRunner,
 ): Promise<string> {

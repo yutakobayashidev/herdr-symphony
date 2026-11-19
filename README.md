@@ -7,7 +7,7 @@ GitHub Project をポーリングし、Herdr 経由で Agent の起動・監視�
 - [openai/symphony](https://github.com/openai/symphony) と [workaholic](https://github.com/tomoasleep/workaholic) の設計をベースにした Agent 管理ツール
 - TUI・Web UI を持たず、Agent の動作ログ・状態はすべて Herdr 上で確認する
 - GitHub Project（または file tracker / schedule tracker）を監視し、候補 Issue を検出する
-- gwq で worktree を作成し、Herdr workspace で Agent を起動する
+- gwq、git-wt、または Git で worktree を作成し、Herdr workspace で Agent を起動する
 - OpenCode または Claude Code を Herdr pane 内で実行し、完了を検知する
 
 ## セットアップ
@@ -111,7 +111,7 @@ bun run test:e2e     # E2E テスト（herdr binary がない場合は skip）
 1. poll tick で tracker から候補 Issue を取得
 2. `work.if` 条件で Issue をフィルタ（未設定時はすべて通過）
 3. orchestrator が dispatchable な Issue を選出（concurrency / state / blocker を判定）
-4. `gwq add` または `git worktree` で worktree を作成
+4. 選択した provider で worktree を作成（`gwq add` / `git wt` / `git worktree add`）
 5. `herdr workspace create` で Herdr workspace を作成
 6. `herdr agent start` で OpenCode または Claude Code を Herdr pane 内で起動
    - agent name は `{issue.identifier}-{workflowName}-{timestamp}`（複数 workflow や再実行での name 衝突を回避）
@@ -496,6 +496,25 @@ work:
 ```
 
 ### work.workspace
+
+#### git-wt（このforkの個人環境向け設定）
+
+`git-wt` provider は、Issue の `owner/repo` を `ghq list -p -e` で検索し、見つかったリポジトリで `git wt --nocd -- <branch>` を実行します。自動cloneは行いません。事前に `ghq get` してください。絶対パスの repository も指定できます。
+
+```yaml
+work:
+  workspace:
+    provider: git-wt
+    branch: 'herdr/{{ issue.identifier | replace: "/", "_" | replace: "#", "_" }}'
+    reuse_existing: true
+    create_if_missing: true
+```
+
+保存先・コピー・作成フックは git-wt の設定に従います。たとえば dotnix の `git config wt.basedir .git/worktree` を利用できます。Symphony 側の `path` / `base_dir` は指定しないでください。
+
+作成先は標準出力の末尾から推測せず、`git wt --json` から取得します。既存worktreeはブランチで検索して再利用し、作成フックを再実行しません。`reuse_existing: false` で既存worktreeがある場合や、作成フックが失敗した場合はエラーになります。フック失敗後にもworktreeが残る場合があるため、再試行前にその状態を確認してください。
+
+必要なコマンドは `git`、`git-wt`、`ghq` です。`gwq` provider の `command` を git-wt に置き換える設定ではありません。
 
 #### gwq (デフォルト)
 

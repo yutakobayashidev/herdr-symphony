@@ -101,7 +101,7 @@ export type GwqWorkspaceConfig = {
 }
 
 export type WorkspaceConfig = {
-  provider: "git" | "gwq" | "none"
+  provider: "git" | "gwq" | "git-wt" | "none"
   reuseExisting: boolean
   createIfMissing: boolean
   branch: string | null
