@@ -1128,3 +1128,40 @@ describe("SymphonyService startupCleanup (durable restore)", () => {
     storage.close()
   })
 })
+
+test("Codex dispatch forwards its model, environment and completion report", async () => {
+  const tmpDir = join(tmpdir(), `hs-codex-service-${Date.now()}`)
+  await mkdir(tmpDir, { recursive: true })
+  const runner = makeCapturingRunner()
+  const config = makeConfig({
+    runner: "herdr_core",
+    herdrAgent: {
+      ...makeConfig().work.herdrAgent,
+      agent: "codex",
+      codex: {
+        model: "gpt-6.2-astra",
+        thinkingEffort: "medium",
+        env: { CODEX_HOME: "/test/config" },
+      },
+    },
+  })
+  const service = new SymphonyService(config, "Implement", {
+    tracker: makeMockTrackerClient([makeIssue()]),
+    runner,
+    logger: makeTestLogger().logger,
+    ensureWorkspace: makeMockWorkspace(tmpDir),
+    claimIssue: () => true,
+    releaseIssue: () => {},
+  })
+  await service.refresh()
+  await service.waitForDispatches()
+  expect(runner.options?.agentKind).toBe("codex")
+  expect(runner.options?.model).toBe("gpt-6.2-astra")
+  expect(runner.options?.thinkingEffort).toBe("medium")
+  expect(runner.options?.env).toEqual({ CODEX_HOME: "/test/config" })
+  expect(runner.options?.reportPath).toBe(join(tmpDir, ".herdr-symphony-report.json"))
+  expect(runner.options?.content).toContain("herdr-symphony report --status done")
+  expect(runner.options?.agmsg).toBeUndefined()
+  service.shutdown()
+  rmSync(tmpDir, { recursive: true, force: true })
+})

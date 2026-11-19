@@ -75,7 +75,7 @@ type AgentContext = {
   agentName: string
   workspacePath: string
   startedAt: string
-  agentKind: "opencode" | "claude"
+  agentKind: "opencode" | "claude" | "codex"
   onBlocked: "continue" | "fail" | null
   reportPath: string | undefined
   resultPath: string | null
@@ -236,6 +236,7 @@ export class HerdrAgentRunner implements Runner {
 
     const useReportPath =
       options.agentKind === "claude" ||
+      options.agentKind === "codex" ||
       (options.agentKind === "opencode" && options.interactive === true)
     const effectiveReportPath = useReportPath ? options.reportPath : undefined
 
@@ -420,6 +421,30 @@ export class HerdrAgentRunner implements Runner {
     const inGrace = this.now() < ctx.reminderGraceUntil
 
     const info = await this.client.getAgent(ctx.target)
+
+    if (ctx.agentKind === "codex") {
+      if (info?.state === "error") {
+        return this.done(ctx, {
+          status: "failed",
+          error: "agent reported error",
+          responseText: null,
+        })
+      }
+      const report = ctx.reportPath ? readReport(ctx.reportPath) : null
+      if (report?.status === "done" || report?.status === "failed")
+        return this.doneFromReportFile(ctx)
+      if (info === null || info.state === "exited") {
+        return this.done(ctx, {
+          status: "failed",
+          error: "agent exited without a completion report",
+          responseText: null,
+        })
+      }
+    }
+
+    if (info?.state === "error" || info?.state === "exited") {
+      return this.done(ctx, { status: "failed", error: `agent ${info.state}`, responseText: null })
+    }
 
     if (info === null) {
       if (ctx.reportPath && ctx.sawAgent) {
@@ -749,6 +774,15 @@ export class HerdrAgentRunner implements Runner {
     options: RunnerOptions,
     resultPath: string | null,
   ): Promise<string[]> {
+    if (options.agentKind === "codex") {
+      const argv = ["codex", "--no-daemon"]
+      if (options.model) argv.push("--model", options.model)
+      if (options.thinkingEffort)
+        argv.push("-c", `model_reasoning_effort=${JSON.stringify(options.thinkingEffort)}`)
+      argv.push(options.content)
+      return argv
+    }
+
     if (options.agentKind === "claude") {
       const argv: string[] = ["claude"]
 

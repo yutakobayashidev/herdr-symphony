@@ -195,7 +195,7 @@ describe("HcClient", () => {
     expect(agent).toEqual({ name: null, state: "unknown", paneId: "t7", workspaceId: null })
   })
 
-  test("getAgent は finished terminal を null にする", async () => {
+  test("getAgent preserves terminal exit instead of losing it", async () => {
     const { runner } = makeCommandRunner({
       get: {
         exitCode: 0,
@@ -213,7 +213,7 @@ describe("HcClient", () => {
     })
     const client = createHcClient({ runCommand: runner })
 
-    expect(await client.getAgent("t7")).toBeNull()
+    expect((await client.getAgent("t7"))?.state).toBe("exited")
   })
 
   test("getAgent は not-found で null を返す", async () => {

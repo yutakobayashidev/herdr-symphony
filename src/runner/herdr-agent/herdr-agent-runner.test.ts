@@ -2839,3 +2839,59 @@ describe("reattach", () => {
     expect(await runner.reattach({ sessionId: "w1:p1", issueId: "issue-1" })).toBeFalse()
   })
 })
+
+describe("Codex through Herdr", () => {
+  test("starts interactive Codex without a daemon and requires an explicit report", async () => {
+    const workspacePath = makeNonInteractiveWorkspace()
+    const reportPath = join(workspacePath, "report.json")
+    const client = makeMockHerdrClient({
+      getAgentResult: { name: "codex", state: "idle", paneId: "t7", workspaceId: "w1" },
+    })
+    const runner = new HerdrAgentRunner(makeConfig(), { herdrClient: client })
+    const handle = await runner.startIssue(makeIssue(), {
+      content: "Implement the issue",
+      attempt: null,
+      workspacePath,
+      agentKind: "codex",
+      model: "gpt-6.2-astra",
+      thinkingEffort: "medium",
+      reportPath,
+    })
+    expect(client.startAgentArgs?.argv).toEqual([
+      "codex",
+      "--no-daemon",
+      "--model",
+      "gpt-6.2-astra",
+      "-c",
+      'model_reasoning_effort="medium"',
+      "Implement the issue",
+    ])
+    expect(client.startAgentArgs?.env?.HERDR_SYMPHONY_REPORT_PATH).toBe(reportPath)
+    expect(await runner.pollCompletion(handle)).toEqual({ state: "running" })
+    writeReport(reportPath, "done", "Created PR and verified tests")
+    expect(await runner.pollCompletion(handle)).toEqual({
+      state: "done",
+      result: { status: "succeeded", error: null, responseText: "Created PR and verified tests" },
+    })
+  })
+
+  for (const state of ["error", "exited"] as const) {
+    test(`Codex ${state} without a report fails instead of succeeding`, async () => {
+      const workspacePath = makeNonInteractiveWorkspace()
+      const client = makeMockHerdrClient({
+        getAgentResult: { name: "codex", state, paneId: "t7", workspaceId: "w1" },
+      })
+      const runner = new HerdrAgentRunner(makeConfig(), { herdrClient: client })
+      const handle = await runner.startIssue(makeIssue(), {
+        content: "Implement",
+        attempt: null,
+        workspacePath,
+        agentKind: "codex",
+        reportPath: join(workspacePath, "report.json"),
+      })
+      const result = await runner.pollCompletion(handle)
+      expect(result.state).toBe("done")
+      if (result.state === "done") expect(result.result.status).toBe("failed")
+    })
+  }
+})

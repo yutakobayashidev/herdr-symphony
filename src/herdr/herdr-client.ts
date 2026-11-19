@@ -24,7 +24,14 @@ export type RecordedCall = {
   env?: Record<string, string>
 }
 
-export type HerdrAgentState = "working" | "blocked" | "done" | "idle" | "unknown"
+export type HerdrAgentState =
+  | "working"
+  | "blocked"
+  | "done"
+  | "idle"
+  | "unknown"
+  | "error"
+  | "exited"
 
 export type HerdrWorkspaceInfo = {
   id: string

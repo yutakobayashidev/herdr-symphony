@@ -563,3 +563,14 @@ test("env 未指定時は空オブジェクトになる", () => {
   expect(config.work.herdrAgent.opencode.env).toEqual({})
   expect(config.work.herdrAgent.claude.env).toEqual({})
 })
+
+test("Codex is available through herdr_core", () => {
+  const config = resolveConfig({
+    tracker: { kind: "file", file: { base_dir: "/issues" } },
+    work: {
+      runner: "herdr_core",
+      herdr_agent: { agent: "codex", codex: { model: "gpt-6.2-astra", thinking_effort: "medium" } },
+    },
+  })
+  expect(config.work.herdrAgent.codex?.model).toBe("gpt-6.2-astra")
+})

@@ -71,6 +71,12 @@ export type HerdrAgentOpencodeConfig = {
   env: Record<string, string>
 }
 
+export type HerdrAgentCodexConfig = {
+  model: string | null
+  thinkingEffort: string | null
+  env: Record<string, string>
+}
+
 export type ClaudeMessenger = "agmsg" | "report_file"
 
 export type HerdrAgentClaudeConfig = {
@@ -86,7 +92,8 @@ export type HerdrAgentClaudeConfig = {
 export type OnBlockedStrategy = "continue" | "fail"
 
 export type HerdrAgentConfig = {
-  agent: "opencode" | "claude"
+  agent: "opencode" | "claude" | "codex"
+  codex?: HerdrAgentCodexConfig
   opencode: HerdrAgentOpencodeConfig
   claude: HerdrAgentClaudeConfig
   workspaceLabel: string | null
@@ -112,7 +119,8 @@ export type WorkspaceConfig = {
 }
 
 export type ResolvedRunnerCommonConfig = {
-  agent: "opencode" | "claude"
+  agent: "opencode" | "claude" | "codex"
+  codex?: HerdrAgentCodexConfig
   opencode: {
     model: string | null
     agent: string | null

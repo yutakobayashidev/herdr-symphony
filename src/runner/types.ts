@@ -15,7 +15,7 @@ export type RunnerOptions = {
   content: string
   attempt: number | null
   workspacePath: string
-  agentKind: "opencode" | "claude"
+  agentKind: "opencode" | "claude" | "codex"
   agent?: string | null
   model?: string | null
   thinkingEffort?: string | null
@@ -42,7 +42,7 @@ export type RunnerOptions = {
 export type RunnerHandleMeta = {
   agentName: string
   workspacePath: string
-  agentKind: "opencode" | "claude"
+  agentKind: "opencode" | "claude" | "codex"
   interactive: boolean
   reportPath: string | null
   resultPath: string | null

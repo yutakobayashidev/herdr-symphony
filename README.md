@@ -681,3 +681,17 @@ Claude は task を受け取ると `herdr-symphony.ack` (`ackOf=task`) を返す
 | `agent.max_concurrent_agents` | number | `10` | 同時実行可能な Agent 数の上限 |
 | `agent.max_retry_backoff_ms` | number | `300000` | リトライの最大バックオフ間隔（ミリ秒）|
 | `agent.max_concurrent_agents_by_state` | Record<string, number> | null | 状態別の同時実行数上限 |
+
+### Codex through Herdr Core
+
+Codex uses the existing Herdr runner and an interactive terminal. Configure
+`work.runner: herdr_core`, `work.herdr_agent.agent: codex`, and optionally
+`work.herdr_agent.codex.model`, `thinking_effort`, and `env`. The runner launches
+`codex --no-daemon`; Codex retains its configured approval and sandbox policies.
+No Codex App Server client is embedded in Symphony.
+
+The prompt requires the existing `herdr-symphony report` command to report
+completion. Idle alone does not establish success. An error, or an agent exit
+without a final report, fails the attempt. Folder trust and interactive approval
+prompts may require operator input on the first run. The Codex executable and
+`herdr-symphony report` must be available on the agent's PATH.

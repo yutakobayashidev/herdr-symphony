@@ -112,6 +112,7 @@ export async function resolveIssueRuntimeConfig(
   const rendered = (await renderFrontmatter(
     {
       repository: work.workspace.repository,
+      codex: work.herdrAgent.codex ?? { model: null, thinkingEffort: null, env: {} },
       opencode: {
         agent: work.herdrAgent.opencode.agent,
         model: work.herdrAgent.opencode.model,
@@ -142,6 +143,7 @@ export async function resolveIssueRuntimeConfig(
     attempt,
   )) as {
     repository: string | null
+    codex: NonNullable<WorkConfig["herdrAgent"]["codex"]>
     opencode: {
       agent: string | null
       model: string | null
@@ -169,6 +171,7 @@ export async function resolveIssueRuntimeConfig(
     runner: {
       kind: work.runner === "herdr_core" ? "herdr_core" : "herdr_agent",
       agent: work.herdrAgent.agent,
+      codex: rendered.codex,
       opencode: {
         agent: normalizeOverride(rendered.opencode.agent),
         model: normalizeOverride(rendered.opencode.model),

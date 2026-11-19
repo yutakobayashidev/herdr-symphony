@@ -131,7 +131,14 @@ const HerdrAgentClaudeSchema = z.object({
 })
 
 const HerdrAgentSchema = z.object({
-  agent: z.enum(["opencode", "claude"]),
+  agent: z.enum(["opencode", "claude", "codex"]),
+  codex: z
+    .object({
+      model: z.string().optional().nullable(),
+      thinking_effort: z.string().optional().nullable(),
+      env: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
   opencode: HerdrAgentOpencodeSchema.optional(),
   claude: HerdrAgentClaudeSchema.optional(),
   workspace_label: z.string().optional().nullable(),
@@ -237,6 +244,11 @@ export function resolveConfigFromSchema(input: unknown): ServiceConfig {
       runner: normalizeOptionalString(work.runner) ?? "herdr_agent",
       herdrAgent: {
         agent: herdrAgentRaw?.agent ?? "opencode",
+        codex: {
+          model: normalizeOptionalString(herdrAgentRaw?.codex?.model),
+          thinkingEffort: normalizeOptionalString(herdrAgentRaw?.codex?.thinking_effort),
+          env: herdrAgentRaw?.codex?.env ?? {},
+        },
         opencode: {
           model:
             typeof herdrAgentRaw?.opencode?.model === "string"
@@ -359,10 +371,17 @@ export function validateDispatchConfig(config: ServiceConfig): void {
     )
   }
 
-  if (config.work.herdrAgent.agent !== "opencode" && config.work.herdrAgent.agent !== "claude") {
+  if (!["opencode", "claude", "codex"].includes(config.work.herdrAgent.agent)) {
     throw new WorkflowError(
       ErrorCode.INVALID_FRONT_MATTER,
       `unsupported herdr_agent.agent: ${config.work.herdrAgent.agent}`,
+    )
+  }
+
+  if (config.work.herdrAgent.agent === "codex" && config.work.runner !== "herdr_core") {
+    throw new WorkflowError(
+      ErrorCode.INVALID_FRONT_MATTER,
+      "codex requires work.runner: herdr_core",
     )
   }
 
