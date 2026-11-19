@@ -574,3 +574,20 @@ test("Codex is available through herdr_core", () => {
   })
   expect(config.work.herdrAgent.codex?.model).toBe("gpt-6.2-astra")
 })
+
+test("Herdr Core App space is optional and configured explicitly", () => {
+  const tracker = { kind: "github_project", github_project: { owner: "@me", number: 4 } }
+  expect(resolveConfig({ tracker }).work.herdrAgent.appSpace).toBeNull()
+  expect(
+    resolveConfig({
+      tracker,
+      work: {
+        runner: "herdr_core",
+        herdr_agent: {
+          agent: "codex",
+          app_space: "symphony-tasks",
+        },
+      },
+    }).work.herdrAgent.appSpace,
+  ).toBe("symphony-tasks")
+})

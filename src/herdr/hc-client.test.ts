@@ -99,6 +99,18 @@ describe("HcClient", () => {
     expect(args.slice(dashDash + 1)).toEqual(["opencode", "run", "hello"])
   })
 
+  test("appSpace adopts workers into a dedicated App space without fixing their tab", async () => {
+    const { runner, calls } = makeCommandRunner({ run: RUN_RESPONSE })
+    const client = createHcClient({ runCommand: runner, appSpace: "symphony-tasks" })
+    await client.startAgent("SYM-41", {
+      workspaceId: "SYM-41",
+      cwd: "/repo/worktree",
+      argv: ["codex"],
+    })
+    expect(calls[0]!.args).toContain("herdr.space=symphony-tasks")
+    expect(calls[0]!.args.some((arg) => arg.startsWith("herdr.tab="))).toBe(false)
+  })
+
   test("startAgent は env を env K=V ラップ argv で伝える", async () => {
     const { runner, calls } = makeCommandRunner({ run: RUN_RESPONSE })
     const client = createHcClient({ runCommand: runner })

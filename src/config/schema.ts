@@ -131,6 +131,7 @@ const HerdrAgentClaudeSchema = z.object({
 })
 
 const HerdrAgentSchema = z.object({
+  app_space: z.string().optional().nullable(),
   agent: z.enum(["opencode", "claude", "codex"]),
   codex: z
     .object({
@@ -243,6 +244,7 @@ export function resolveConfigFromSchema(input: unknown): ServiceConfig {
       stoppedState: normalizeOptionalString(work.stopped_state),
       runner: normalizeOptionalString(work.runner) ?? "herdr_agent",
       herdrAgent: {
+        appSpace: normalizeOptionalString(herdrAgentRaw?.app_space),
         agent: herdrAgentRaw?.agent ?? "opencode",
         codex: {
           model: normalizeOptionalString(herdrAgentRaw?.codex?.model),

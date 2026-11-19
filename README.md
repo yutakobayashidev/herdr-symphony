@@ -695,3 +695,9 @@ completion. Idle alone does not establish success. An error, or an agent exit
 without a final report, fails the attempt. Folder trust and interactive approval
 prompts may require operator input on the first run. The Codex executable and
 `herdr-symphony report` must be available on the agent's PATH.
+
+### Herdr App space
+
+With `work.runner: herdr_core`, set `work.herdr_agent.app_space` to a local Herdr App space ID to show each worker in its own tab. Omit it to keep workers headless. The adapter uses Core's `herdr.space` label; it does not require the App to be open at launch. An unknown ID is adopted as a new unnamed space. Keep a Queue tab in a named dedicated space if its name should survive the last worker closing.
+
+Core processes inherit the Core server's environment, not the Symphony service's. Pass the intended `PATH`, `CODEX_HOME`, and XDG directories through `work.herdr_agent.codex.env`, using the same source as the service and history collector. Completion cleanup still targets only the worker's recorded terminal ID.

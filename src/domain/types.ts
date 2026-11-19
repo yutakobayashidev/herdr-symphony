@@ -92,6 +92,7 @@ export type HerdrAgentClaudeConfig = {
 export type OnBlockedStrategy = "continue" | "fail"
 
 export type HerdrAgentConfig = {
+  appSpace?: string | null
   agent: "opencode" | "claude" | "codex"
   codex?: HerdrAgentCodexConfig
   opencode: HerdrAgentOpencodeConfig

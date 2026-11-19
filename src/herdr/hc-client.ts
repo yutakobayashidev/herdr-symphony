@@ -9,6 +9,7 @@ import type {
 import { defaultCommandRunner } from "./herdr-client"
 
 export type HcClientDeps = HerdrClientDeps & {
+  appSpace?: string | null
   session?: string
   pollIntervalMs?: number
   now?: () => number
@@ -94,6 +95,7 @@ export function createHcClient(deps: HcClientDeps = {}): HerdrClient {
         "--json",
         "--label",
         `issue=${opts.workspaceId}`,
+        ...(deps.appSpace ? ["--label", `herdr.space=${deps.appSpace}`] : []),
         "--no-notify",
         "--outlive-parent",
         "--cwd",
