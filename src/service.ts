@@ -536,6 +536,7 @@ export class SymphonyService {
         model: runnerModel,
         thinkingEffort: runnerThinkingEffort,
         permissionMode: runnerPermissionMode,
+        yolo: runtimeConfig.runner.agent === "codex" && runtimeConfig.runner.codex?.yolo === true,
         onBlocked: runnerOnBlocked,
         timeoutMs: runnerTimeoutMs,
         closePaneAfterDoneMs: runtimeConfig.runner.closePaneAfterDoneMs,

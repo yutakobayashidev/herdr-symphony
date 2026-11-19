@@ -776,6 +776,7 @@ export class HerdrAgentRunner implements Runner {
   ): Promise<string[]> {
     if (options.agentKind === "codex") {
       const argv = ["codex", "--no-daemon"]
+      if (options.yolo) argv.push("--dangerously-bypass-approvals-and-sandbox")
       if (options.model) argv.push("--model", options.model)
       if (options.thinkingEffort)
         argv.push("-c", `model_reasoning_effort=${JSON.stringify(options.thinkingEffort)}`)

@@ -72,6 +72,7 @@ export type HerdrAgentOpencodeConfig = {
 }
 
 export type HerdrAgentCodexConfig = {
+  yolo?: boolean
   model: string | null
   thinkingEffort: string | null
   env: Record<string, string>

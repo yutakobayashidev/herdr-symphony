@@ -591,3 +591,16 @@ test("Herdr Core App space is optional and configured explicitly", () => {
     }).work.herdrAgent.appSpace,
   ).toBe("symphony-tasks")
 })
+
+for (const yolo of [true, false, undefined]) {
+  test(`Codex YOLO configuration resolves ${yolo}`, () => {
+    const config = resolveConfig({
+      tracker: { kind: "file", file: { base_dir: "/issues" } },
+      work: {
+        runner: "herdr_core",
+        herdr_agent: { agent: "codex", codex: { yolo } },
+      },
+    })
+    expect(config.work.herdrAgent.codex?.yolo).toBe(yolo === true)
+  })
+}

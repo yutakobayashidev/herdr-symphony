@@ -135,6 +135,7 @@ const HerdrAgentSchema = z.object({
   agent: z.enum(["opencode", "claude", "codex"]),
   codex: z
     .object({
+      yolo: z.boolean().optional(),
       model: z.string().optional().nullable(),
       thinking_effort: z.string().optional().nullable(),
       env: z.record(z.string(), z.string()).optional(),
@@ -247,6 +248,7 @@ export function resolveConfigFromSchema(input: unknown): ServiceConfig {
         appSpace: normalizeOptionalString(herdrAgentRaw?.app_space),
         agent: herdrAgentRaw?.agent ?? "opencode",
         codex: {
+          yolo: herdrAgentRaw?.codex?.yolo === true,
           model: normalizeOptionalString(herdrAgentRaw?.codex?.model),
           thinkingEffort: normalizeOptionalString(herdrAgentRaw?.codex?.thinking_effort),
           env: herdrAgentRaw?.codex?.env ?? {},

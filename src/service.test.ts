@@ -1141,6 +1141,7 @@ test("Codex dispatch forwards its model, environment and completion report", asy
       codex: {
         model: "gpt-6.2-astra",
         thinkingEffort: "medium",
+        yolo: true,
         env: { CODEX_HOME: "/test/config" },
       },
     },
@@ -1156,6 +1157,7 @@ test("Codex dispatch forwards its model, environment and completion report", asy
   await service.refresh()
   await service.waitForDispatches()
   expect(runner.options?.agentKind).toBe("codex")
+  expect(runner.options?.yolo).toBe(true)
   expect(runner.options?.model).toBe("gpt-6.2-astra")
   expect(runner.options?.thinkingEffort).toBe("medium")
   expect(runner.options?.env).toEqual({ CODEX_HOME: "/test/config" })

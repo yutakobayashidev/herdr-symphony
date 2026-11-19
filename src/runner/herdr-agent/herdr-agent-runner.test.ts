@@ -2841,6 +2841,23 @@ describe("reattach", () => {
 })
 
 describe("Codex through Herdr", () => {
+  for (const yolo of [true, false, undefined]) {
+    test(`Codex YOLO flag follows explicit setting ${yolo}`, async () => {
+      const client = makeMockHerdrClient({})
+      const runner = new HerdrAgentRunner(makeConfig(), { herdrClient: client })
+      await runner.startIssue(makeIssue(), {
+        content: "Implement the issue",
+        attempt: null,
+        workspacePath: makeNonInteractiveWorkspace(),
+        agentKind: "codex",
+        yolo,
+      })
+      expect(
+        client.startAgentArgs?.argv?.includes("--dangerously-bypass-approvals-and-sandbox"),
+      ).toBe(yolo === true)
+    })
+  }
+
   test("starts interactive Codex without a daemon and requires an explicit report", async () => {
     const workspacePath = makeNonInteractiveWorkspace()
     const reportPath = join(workspacePath, "report.json")

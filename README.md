@@ -686,8 +686,11 @@ Claude は task を受け取ると `herdr-symphony.ack` (`ackOf=task`) を返す
 
 Codex uses the existing Herdr runner and an interactive terminal. Configure
 `work.runner: herdr_core`, `work.herdr_agent.agent: codex`, and optionally
-`work.herdr_agent.codex.model`, `thinking_effort`, and `env`. The runner launches
-`codex --no-daemon`; Codex retains its configured approval and sandbox policies.
+`work.herdr_agent.codex.model`, `thinking_effort`, `yolo`, and `env`. The runner launches
+`codex --no-daemon`. Set `work.herdr_agent.codex.yolo: true` to add
+`--dangerously-bypass-approvals-and-sandbox`,
+bypassing approval prompts and sandboxing for that worker. When omitted or false,
+Codex retains its configured approval and sandbox policies.
 No Codex App Server client is embedded in Symphony.
 
 The prompt requires the existing `herdr-symphony report` command to report
