@@ -25,9 +25,21 @@ function config() {
     work: { workspace: { provider: "git-wt", branch: "feature/test" } },
   })
 }
-function fixture(options: { existing?: boolean; missing?: boolean; failure?: boolean } = {}) {
+function fixture(
+  options: {
+    existing?: boolean
+    missing?: boolean
+    failure?: boolean
+    localBranch?: boolean
+    remoteBranch?: boolean
+    fetchFailure?: boolean
+    noOriginHead?: boolean
+    noOrigin?: boolean
+  } = {},
+) {
   const calls: string[][] = []
   let exists = options.existing ?? false
+  const exit = (ok: boolean) => ({ exitCode: ok ? 0 : 1, stdout: "", stderr: "" })
   const runCommand: CommandRunner = async (command, args) => {
     calls.push([command, ...args])
     if (command === "ghq")
@@ -42,7 +54,23 @@ function fixture(options: { existing?: boolean; missing?: boolean; failure?: boo
         ),
         stderr: "",
       }
-    if (args.join(" ") === "wt --nocd -- feature/test") {
+    if (args.join(" ") === "show-ref --verify --quiet refs/heads/feature/test")
+      return exit(options.localBranch ?? false)
+    if (args.join(" ") === "show-ref --verify --quiet refs/remotes/origin/feature/test")
+      return exit(options.remoteBranch ?? false)
+    if (args.join(" ") === "remote get-url origin") return exit(!options.noOrigin)
+    if (args.join(" ") === "fetch --quiet origin")
+      return options.fetchFailure
+        ? { exitCode: 128, stdout: "", stderr: "could not read from remote" }
+        : exit(true)
+    if (args.join(" ") === "symbolic-ref --quiet --short refs/remotes/origin/HEAD")
+      return options.noOriginHead
+        ? exit(false)
+        : { exitCode: 0, stdout: "origin/main\n", stderr: "" }
+    if (
+      args.join(" ") === "wt --nocd -- feature/test" ||
+      args.join(" ") === "wt --nocd -- feature/test origin/main"
+    ) {
       exists = true
       return {
         exitCode: options.failure ? 1 : 0,
@@ -65,6 +93,45 @@ test("ghq resolves the repository and git-wt chooses the created worktree path",
   expect(result.path).toBe("/custom/worktrees/feature/test")
   expect(result.createdNow).toBe(true)
   expect(f.calls[0]).toEqual(["ghq", "list", "-p", "-e", "owner/repo"])
+  expect(f.calls).toContainEqual(["git", "wt", "--nocd", "--", "feature/test", "origin/main"])
+})
+test("new branches start from the fetched default branch of origin", async () => {
+  const f = fixture()
+  await ensureWorkspace(issue, config().work.workspace, f)
+  const fetchAt = f.calls.findIndex((c) => c.join(" ") === "git fetch --quiet origin")
+  const createAt = f.calls.findIndex((c) => c.includes("--nocd"))
+  expect(fetchAt).toBeGreaterThan(-1)
+  expect(createAt).toBeGreaterThan(fetchAt)
+  expect(f.calls[createAt]).toEqual(["git", "wt", "--nocd", "--", "feature/test", "origin/main"])
+})
+test("existing local branches are checked out without fetching or a start point", async () => {
+  const f = fixture({ localBranch: true })
+  await ensureWorkspace(issue, config().work.workspace, f)
+  expect(f.calls.some((c) => c.includes("fetch"))).toBe(false)
+  expect(f.calls).toContainEqual(["git", "wt", "--nocd", "--", "feature/test"])
+})
+test("remote-only branches are left to git-wt without a start point", async () => {
+  const f = fixture({ remoteBranch: true })
+  await ensureWorkspace(issue, config().work.workspace, f)
+  expect(f.calls).toContainEqual(["git", "fetch", "--quiet", "origin"])
+  expect(f.calls).toContainEqual(["git", "wt", "--nocd", "--", "feature/test"])
+})
+test("a failed fetch stops worktree creation", async () => {
+  const f = fixture({ fetchFailure: true })
+  await expect(ensureWorkspace(issue, config().work.workspace, f)).rejects.toThrow(
+    "could not read from remote",
+  )
+  expect(f.calls.some((c) => c.includes("--nocd"))).toBe(false)
+})
+test("repositories without origin start from the repository HEAD without fetching", async () => {
+  const f = fixture({ noOrigin: true })
+  await ensureWorkspace(issue, config().work.workspace, f)
+  expect(f.calls.some((c) => c.includes("fetch"))).toBe(false)
+  expect(f.calls).toContainEqual(["git", "wt", "--nocd", "--", "feature/test"])
+})
+test("without origin/HEAD the branch starts from the repository HEAD", async () => {
+  const f = fixture({ noOriginHead: true })
+  await ensureWorkspace(issue, config().work.workspace, f)
   expect(f.calls).toContainEqual(["git", "wt", "--nocd", "--", "feature/test"])
 })
 test("existing worktree is reused by branch without invoking creation hooks", async () => {

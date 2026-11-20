@@ -514,6 +514,8 @@ work:
 
 作成先は標準出力の末尾から推測せず、`git wt --json` から取得します。既存worktreeはブランチで検索して再利用し、作成フックを再実行しません。`reuse_existing: false` で既存worktreeがある場合や、作成フックが失敗した場合はエラーになります。フック失敗後にもworktreeが残る場合があるため、再試行前にその状態を確認してください。
 
+新しいブランチは、`git fetch origin` のあとに `origin/HEAD` が指す default branch（例: `origin/main`）から作ります。repository root で checkout しているブランチには左右されません。ローカルに同名のブランチがあればそれを使い、リモートにだけある場合は git-wt の既定の動作に任せます。fetch に失敗した場合は worktree を作らずにエラーにし、通常の再試行に回します。`origin` リモートが無い、または `origin/HEAD` が設定されていない場合は repository root の HEAD から作ります。
+
 必要なコマンドは `git`、`git-wt`、`ghq` です。`gwq` provider の `command` を git-wt に置き換える設定ではありません。
 
 #### gwq (デフォルト)

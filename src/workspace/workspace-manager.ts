@@ -173,11 +173,33 @@ async function ensureGitWtWorkspace(
     return { key: seed.key, branch, path: existing.path, repositoryRoot, createdNow: false }
   }
   if (!config.createIfMissing) throw new Error(`workspace not found for branch: ${branch}`)
-  const result = await runCommand("git", ["wt", "--nocd", "--", branch], repositoryRoot)
+  const startPoint = await resolveGitWtStartPoint(branch, repositoryRoot, runCommand)
+  const result = await runCommand(
+    "git",
+    ["wt", "--nocd", "--", branch, ...(startPoint ? [startPoint] : [])],
+    repositoryRoot,
+  )
   if (result.exitCode !== 0) throw new Error(result.stderr.trim() || `git wt failed: ${branch}`)
   const created = await find()
   if (!created) throw new Error(`git-wt workspace not found after creation: ${branch}`)
   return { key: seed.key, branch, path: created.path, repositoryRoot, createdNow: true }
+}
+
+async function resolveGitWtStartPoint(
+  branch: string,
+  repositoryRoot: string,
+  runCommand: CommandRunner,
+): Promise<string | null> {
+  const git = (args: string[]) => runCommand("git", args, repositoryRoot)
+  const succeeds = async (args: string[]) => (await git(args)).exitCode === 0
+  const hasRef = (ref: string) => succeeds(["show-ref", "--verify", "--quiet", ref])
+  if (await hasRef(`refs/heads/${branch}`)) return null
+  if (!(await succeeds(["remote", "get-url", "origin"]))) return null
+  const fetched = await git(["fetch", "--quiet", "origin"])
+  if (fetched.exitCode !== 0) throw new Error(fetched.stderr.trim() || "git fetch origin failed")
+  if (await hasRef(`refs/remotes/origin/${branch}`)) return null
+  const originHead = await git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"])
+  return originHead.exitCode === 0 ? originHead.stdout.trim() || null : null
 }
 
 async function ensureGitWorkspace(
